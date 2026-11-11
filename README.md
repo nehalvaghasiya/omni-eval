@@ -1,10 +1,10 @@
 # OmniEval
 
-**Universal AI evaluation, benchmarking, observability, and security — from precomputed predictions or live endpoints.**
+**Universal AI evaluation, benchmarking, observability, and security - from precomputed predictions or live endpoints.**
 
 > **Status: architecture specification / proposed open-source project.** This README describes the intended product and interfaces. Examples labelled *proposed CLI* are design contracts, not commands verified against a released implementation. No performance claims are made.
 
-[Architecture](#architecture) · [Quick start concepts](#three-ways-to-run-evaluations) · [Data format](#standard-data-contracts) · [Coverage](#evaluation-coverage) · [Integrations](#open-source-integrations) · [Security](#security-and-trust-boundaries) · [Roadmap](#implementation-roadmap)
+[Architecture](#architecture) · [Quick start concepts](#three-ways-to-run-evaluations) · [Data format](#standard-data-contracts) · [Coverage](#evaluation-coverage) · [Integrations](#open-source-integrations) · [Security](#security-and-trust-boundaries)
 
 ## Why OmniEval?
 
@@ -390,44 +390,14 @@ Customer-supplied endpoints and files introduce real risk. Before public multi-u
 - Only run security attacks against authorized targets with bounded scopes and audit logs. Prevent real exfiltration when simulating attacks.
 - Enforce project/tenant isolation and retention policies before supporting multiple organizations.
 
-## Implementation roadmap
-
-| Milestone | Deliverable | Acceptance criteria |
-| --- | --- | --- |
-| **M1 — Offline MVP** | Schemas, JSONL import, alignment, classification and text/retrieval metrics, HTML/JSON reports | Run precomputed classification, QA and retrieval suites without model access |
-| **M2 — Live + hybrid** | Secure endpoint adapters, request/response mapping, timing, retries, paired comparisons | Same metrics on uploaded and live predictions; explicit latency boundaries |
-| **M3 — RAG/agent observability** | Stage traces, Ragas/DeepEval adapters, agent tool-state validation | Explain retrieval failure or unauthorized simulated action with evidence |
-| **M4 — Security** | Promptfoo/Garak adapters, scanner import and findings | Replay an authorized attack case; report actual outcome vs detector verdict |
-| **M5 — Multimodal and benchmarks** | ASR/image metrics, LM Harness/LMMS-Eval/MTEB runners | Import results without installing all runner dependencies in core |
-| **M6 — UI and platform** | React dashboard, remote workers, PostgreSQL, CI gates, RBAC | Compare two versioned runs from sample evidence to aggregate score |
-
-### Definition of done for every milestone
-
-- Documented input/output contract and schema version.
-- At least one complete, realistic example with checked-in small fixtures.
-- Unit, integration and adapter contract tests; offline mode tested without network access.
-- Reproducible command with a deterministic expected output where applicable.
-- Missing-field and failure-mode tests.
-- Measured latency/accuracy claims only when actual artifacts exist.
-
-## Suggested first public demo
-
-**SystemOne vs. pretrained instruction model**: upload your SystemOne Guard predictions with `allow/review/block` probabilities, supply the same evaluation labels, then upload an instruction LLM's precomputed decisions or query its endpoint. Show accuracy, macro-F1, confusion matrices, calibration (only where comparable probabilities exist), p50/p95 latency (only when measurable), and independently authored adversarial challenge results. Allow reviewers to inspect each disagreement.
-
-The second flagship demo should be an offline RAG import: users upload questions, reference answers, retrieved chunk IDs and generated answers, and the platform scores retrieval and generation separately without requiring the original RAG service to remain online.
 
 ## Research foundations
 
-- [DeepEval: single-turn test cases](https://deepeval.com/docs/evaluation-test-cases) — precomputed `actual_output`, expected outputs, retrieval contexts and tools.
-- [DeepEval: reference-free evaluation](https://deepeval.com/docs/faq) — metrics differ in their reference and evidence requirements.
-- [Ragas evaluation schemas](https://docs.ragas.io/en/stable/references/evaluation_schema/) — input, response, references and retrieved contexts.
-- [Microsoft RAG evaluation guide](https://learn.microsoft.com/en-us/azure/architecture/ai-ml/guide/rag/rag-llm-evaluation-phase) — component-level RAG evaluation.
-- [OpenTelemetry](https://opentelemetry.io/) — vendor-neutral tracing and metrics.
+- [DeepEval: single-turn test cases](https://deepeval.com/docs/evaluation-test-cases) - precomputed `actual_output`, expected outputs, retrieval contexts and tools.
+- [DeepEval: reference-free evaluation](https://deepeval.com/docs/faq) - metrics differ in their reference and evidence requirements.
+- [Ragas evaluation schemas](https://docs.ragas.io/en/stable/references/evaluation_schema/) - input, response, references and retrieved contexts.
+- [Microsoft RAG evaluation guide](https://learn.microsoft.com/en-us/azure/architecture/ai-ml/guide/rag/rag-llm-evaluation-phase) - component-level RAG evaluation.
+- [OpenTelemetry](https://opentelemetry.io/) - vendor-neutral tracing and metrics.
 
-## License and contribution policy
-
-Choose a repository license before publication (Apache-2.0 is one suitable option, subject to project ownership). External runners and models retain their own licenses; linking to a project does not grant permission to redistribute its code or weights. Contributions should include a schema/adapter contract test, example evaluation, documentation, and explicit model/benchmark licensing information.
-
----
-
-**OmniEval's promise:** *Bring your predictions, bring your endpoint, or bring both. Get reproducible evidence—not an unqualified score.*
+## License
+Apache-2.0
