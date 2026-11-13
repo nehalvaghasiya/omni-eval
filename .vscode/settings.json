@@ -1,0 +1,5 @@
+{
+    "powerquery.client.additionalSymbolsDirectories": [
+        "/home/nehal/Personal/omni-eval/.vscode/excel-pq-symbols"
+    ]
+}
