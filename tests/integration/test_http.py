@@ -7,9 +7,6 @@ import pytest
 from omni_eval.api import evaluate
 from omni_eval.endpoints.endpoint_policy import EndpointPolicy
 from omni_eval.exceptions import SecurityError
-from omni_eval.schemas.metric_spec import MetricSpec
-from omni_eval.schemas.run_spec import RunSpec
-from omni_eval.schemas.source_spec import SourceSpec
 from omni_eval.schemas.target_spec import TargetSpec
 from omni_eval.sources.http_prediction_source import HttpPredictionSource
 

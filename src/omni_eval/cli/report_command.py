@@ -30,7 +30,9 @@ def report_command(
         raise ValueError("report requires --run")
 
     result = load_run(run)
-    renderers = {
+    renderers: dict[
+        str, type[HtmlReporter] | type[JsonReporter] | type[MarkdownReporter]
+    ] = {
         "html": HtmlReporter,
         "json": JsonReporter,
         "markdown": MarkdownReporter,

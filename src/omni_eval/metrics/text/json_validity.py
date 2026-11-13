@@ -3,7 +3,7 @@ from typing import Any
 
 
 def json_validity(output: Any) -> float:
-    if isinstance(output, (dict, list)):
+    if isinstance(output, dict | list):
         return 1.0
 
     if not isinstance(output, str):

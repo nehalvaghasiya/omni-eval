@@ -1,16 +1,20 @@
-from omni_eval.core.metric_descriptor import MetricDescriptor
+from omni_eval.core.metric_descriptor import (
+    MetricDescriptor,
+    MetricFamily,
+    MetricOrientation,
+)
 from omni_eval.exceptions import InputError
 
 # Canonical static catalog. Only implemented metrics are registered.
-_METRICS: dict[str, tuple[str, str | None, str, str, str]] = {}
+_METRICS: dict[str, tuple[MetricFamily, str | None, str, MetricOrientation, str]] = {}
 
 
 def _register(
     names: str,
-    family: str,
+    family: MetricFamily,
     reference: str | None,
     prediction: str,
-    orientation: str = "higher_is_better",
+    orientation: MetricOrientation = "higher_is_better",
     aggregation: str = "mean",
 ) -> None:
     for name in names.split():

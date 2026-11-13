@@ -1,9 +1,9 @@
 """Size-bounded UTF-8 JSONL with line-numbered errors."""
 
 import json
-from collections.abc import Iterator
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Any, TypeVar
+from typing import TypeVar
 
 from pydantic import BaseModel, ValidationError
 
@@ -58,7 +58,7 @@ def load_jsonl(
     return records
 
 
-def write_jsonl(path: str | Path, rows: Iterator[BaseModel] | list[BaseModel]) -> None:
+def write_jsonl(path: str | Path, rows: Iterable[BaseModel]) -> None:
     with Path(path).open("w", encoding="utf-8", newline="\n") as sink:
         for item in rows:
             sink.write(item.model_dump_json(exclude_none=True) + "\n")

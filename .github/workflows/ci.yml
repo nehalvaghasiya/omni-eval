@@ -1,0 +1,47 @@
+name: CI
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.11', '3.12', '3.13']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: '0.12.1'
+          enable-cache: true
+          python-version: ${{ matrix.python-version }}
+      - name: Check dependency lock
+        run: uv lock --check
+      - name: Install locked development dependencies
+        run: uv sync --locked --group dev
+      - name: Check lint and formatting
+        run: make check
+      - name: Check strict types
+        run: make typecheck
+      - name: Run tests with coverage
+        run: uv run --no-sync pytest -q --cov=omni_eval
+      - name: Air-gapped dry runs
+        run: |
+          for command in 'init' 'validate' 'evaluate' 'compare' 'replay' 'report' 'doctor' 'judge' 'runner' 'serve'; do
+            uv run --no-sync omni-eval "$command" --dry-run
+          done
+          uv run --no-sync omni-eval metrics list --dry-run
+          uv run --no-sync omni-eval metrics inspect --dry-run
+        env:
+          OMNIEVAL_TARGET_URL: ''
+          OMNIEVAL_JUDGE_URL: ''
+      - run: uv build
+      - name: Validate wheel in separate environment
+        run: |
+          uv venv .wheel-smoke --python ${{ matrix.python-version }}
+          uv pip install --python .wheel-smoke/bin/python dist/*.whl
+          .wheel-smoke/bin/python -c 'import omni_eval; print(omni_eval.__version__)'
+          .wheel-smoke/bin/omni-eval evaluate --dry-run

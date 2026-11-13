@@ -6,7 +6,7 @@ import pytest
 from omni_eval.api import evaluate, load_run
 from omni_eval.exceptions import InputError
 from omni_eval.schemas.prediction_record import PredictionRecord
-from omni_eval.sources.jsonl_loader import load_jsonl, write_jsonl
+from omni_eval.sources.jsonl_loader import load_jsonl
 from omni_eval.storage.file_run_repository import FileRunRepository
 
 

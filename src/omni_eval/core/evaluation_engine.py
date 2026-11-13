@@ -105,9 +105,14 @@ def _sample_metric(
         )
 
     if name == "json_schema_validity":
+        schema = ref.get("schema", sample.input.get("schema"))
+
+        if not isinstance(schema, dict):
+            raise ValueError("JSON schema must be an object")
+
         return schema_compliance(
             pred.output.get("text", pred.output.get("answer", pred.output)),
-            ref.get("schema", sample.input.get("schema")),
+            schema,
         )
 
     if name in ("wer", "cer"):
@@ -327,6 +332,8 @@ class EvaluationEngine:
                 else:
                     if descriptor.family == "classification":
                         for sample, pred in good:
+                            assert sample.reference is not None
+
                             scores.append(
                                 SampleScore(
                                     sample_id=sample.sample_id,

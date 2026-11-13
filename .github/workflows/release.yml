@@ -1,0 +1,46 @@
+name: Release
+on:
+  push:
+    tags: ['v*']
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: '0.12.1'
+          python-version: '3.12'
+      - name: Check dependency lock
+        run: uv lock --check
+      - name: Install locked development dependencies
+        run: uv sync --locked --group dev
+      - name: Check lint and formatting
+        run: make check
+      - name: Check strict types
+        run: make typecheck
+      - name: Run tests
+        run: make test
+      - name: Build distributions
+        run: uv build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: distributions
+          path: dist/
+  publish:
+    needs: verify
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: distributions
+          path: dist/
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: '0.12.1'
+      - run: uv publish --trusted-publishing always dist/*

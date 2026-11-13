@@ -1,11 +1,9 @@
 import json
-from pathlib import Path
 
 import pytest
 
 from omni_eval.adapters.runner_result_importer import RunnerResultImporter
 from omni_eval.exceptions import InputError
-from omni_eval.fixtures.fixture_predictions import classification_fixture
 from omni_eval.judges.builtin_rubrics import get_rubric
 from omni_eval.judges.fixture_judge_client import FixtureJudgeClient
 from omni_eval.judges.judge_cache_key import JudgeCacheKey

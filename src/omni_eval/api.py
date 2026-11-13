@@ -9,6 +9,7 @@ from omni_eval.core.capability_registry import preflight
 from omni_eval.core.evaluation_engine import EvaluationEngine
 from omni_eval.exceptions import InputError
 from omni_eval.fixtures.fixture_predictions import classification_fixture
+from omni_eval.schemas.comparison_result import ComparisonResult
 from omni_eval.schemas.eval_sample import EvalSample
 from omni_eval.schemas.metric_spec import MetricSpec
 from omni_eval.schemas.prediction_record import PredictionRecord
@@ -130,12 +131,12 @@ def evaluate(
 
         records = (
             load_jsonl(samples, EvalSample)
-            if isinstance(samples, (str, Path))
+            if isinstance(samples, str | Path)
             else list(samples)
         )
         outputs = (
             load_jsonl(predictions, PredictionRecord)
-            if isinstance(predictions, (str, Path))
+            if isinstance(predictions, str | Path)
             else list(predictions)
         )
         mode = "offline"
@@ -233,13 +234,12 @@ def compare(
     confidence: float = 0.95,
     seed: int = 42,
     iterations: int = 1000,
-) -> list["ComparisonResult"]:
+) -> list[ComparisonResult]:
     """Compare compatible saved runs with paired bootstrap intervals."""
     from omni_eval.comparison.paired_comparator import PairedComparator
-    from omni_eval.schemas.comparison_result import ComparisonResult
 
-    left = load_run(baseline) if isinstance(baseline, (str, Path)) else baseline
-    right = load_run(candidate) if isinstance(candidate, (str, Path)) else candidate
+    left = load_run(baseline) if isinstance(baseline, str | Path) else baseline
+    right = load_run(candidate) if isinstance(candidate, str | Path) else candidate
 
     return PairedComparator().compare(
         left,
