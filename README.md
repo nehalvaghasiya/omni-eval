@@ -212,7 +212,6 @@ configuration, or `--dry-run` for a clearly synthetic fixture. See
 - General-purpose multimodal model execution or end-to-end image, audio, and
   video benchmark suites.
 
-Broader architectural plans remain in [`PLAN.md`](PLAN.md).
 
 ## Development
 
