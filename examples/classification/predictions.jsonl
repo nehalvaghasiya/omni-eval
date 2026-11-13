@@ -1,0 +1,3 @@
+{"sample_id":"c1","output":{"label":"account"},"probabilities":{"labels":["account","billing"],"values":[0.91,0.09],"kind":"softmax"},"extensions":{}}
+{"sample_id":"c2","output":{"label":"billing"},"probabilities":{"labels":["account","billing"],"values":[0.22,0.78],"kind":"softmax"},"extensions":{}}
+{"sample_id":"c3","output":{"label":"account"},"probabilities":{"labels":["account","billing"],"values":[0.55,0.45],"kind":"softmax"},"extensions":{}}

@@ -1,0 +1,1 @@
+{"sample_id":"rag1","input":{"query":"What is refund period?"},"reference":{"answer":"30 days","relevant_chunk_ids":["policy#4"]},"metadata":{},"extensions":{}}

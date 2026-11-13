@@ -1,0 +1,2 @@
+{"sample_id":"t1","input":{"question":"What is 2 + 2?"},"reference":{"answer":"4"},"metadata":{},"extensions":{}}
+{"sample_id":"t2","input":{"question":"Say hello"},"reference":{"answer":"hello world"},"metadata":{},"extensions":{}}

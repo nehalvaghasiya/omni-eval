@@ -1,0 +1,12 @@
+# Only one explicit rubric at a time; real calls require prior approval.
+schema_version: "1.0"
+name: local-judge
+source: {mode: offline, predictions: examples/text/predictions.jsonl}
+dataset: examples/text/samples.jsonl
+metrics:
+  - name: judge_correctness
+judge:
+  provider: fixture
+  rubric_id: answer-correctness-v1
+  max_calls: 10
+report: {formats: [json, html]}

@@ -1,0 +1,23 @@
+# Explicit development-only local endpoint; no endpoint is contacted by --dry-run.
+schema_version: "1.0"
+name: local-model
+source:
+  mode: endpoint
+  target:
+    type: http_json
+    url_env: OMNIEVAL_TARGET_URL
+    authorization_env: OMNIEVAL_TARGET_TOKEN
+    allowed_hosts: ["127.0.0.1:8001"]
+    allow_localhost: true
+    method: POST
+    request_template: {text: "$.input.text"}
+    response_map: {output: "$.result", probabilities: "$.probabilities"}
+    timeout_seconds: 20
+    max_concurrency: 2
+    retries: 0
+dataset: examples/classification/samples.jsonl
+metrics:
+  - name: accuracy
+  - name: macro_f1
+  - name: latency_p95
+report: {formats: [json, html]}

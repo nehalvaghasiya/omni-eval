@@ -1,0 +1,1 @@
+{"sample_id":"a1","input":{"task":"Create draft event"},"reference":{"expected_state":{"draft_created":true},"allowed_tools":["calendar/create_draft"],"expected_tools":["calendar/create_draft"]},"metadata":{},"extensions":{}}

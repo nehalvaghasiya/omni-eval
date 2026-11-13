@@ -1,0 +1,13 @@
+schema_version: "1.0"
+name: example-classification
+source:
+  mode: offline
+  predictions: examples/classification/predictions.jsonl
+dataset: examples/classification/samples.jsonl
+metrics:
+  - name: accuracy
+  - name: macro_f1
+  - name: brier_score
+  - name: ece
+    settings: {bins: 5}
+report: {formats: [json, html, markdown, junit]}
