@@ -21,6 +21,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
-      - run: uv lock --check
+        with:
+          version: '0.12.1'
+          python-version: '3.12'
+      - name: Check dependency lock
+        run: uv lock --check
       - run: uv export --locked --no-dev --no-emit-project --format requirements-txt > requirements-audit.txt
       - run: uvx --from pip-audit pip-audit --disable-pip -r requirements-audit.txt

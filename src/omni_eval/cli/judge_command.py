@@ -3,9 +3,9 @@ from pathlib import Path
 import typer
 
 from omni_eval.api import load_run, load_spec
-from omni_eval.fixtures.fixture_predictions import classification_fixture
 from omni_eval.judges.builtin_rubrics import get_rubric
 from omni_eval.judges.fixture_judge_client import FixtureJudgeClient
+from omni_eval.judges.judge_client import JudgeClient
 from omni_eval.judges.judge_evaluator import JudgeEvaluator
 from omni_eval.judges.openai_compatible_judge_client import OpenAICompatibleJudgeClient
 from omni_eval.schemas.eval_sample import EvalSample
@@ -17,6 +17,8 @@ def judge_command(
     config: Path | None = typer.Option(None, "--config"),
     dry_run: bool = typer.Option(False, "--dry-run"),
 ) -> None:
+    client: JudgeClient
+
     if dry_run:
         rubric = get_rubric("answer-correctness-v1")
         samples = [

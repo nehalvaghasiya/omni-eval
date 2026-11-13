@@ -15,14 +15,19 @@ jobs:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
         with:
+          version: '0.12.1'
           enable-cache: true
           python-version: ${{ matrix.python-version }}
-      - run: uv lock --check
-      - run: uv sync --locked --group dev
-      - run: uv run --no-sync ruff check .
-      - run: uv run --no-sync ruff format --check .
-      - run: uv run --no-sync mypy src/omni_eval
-      - run: uv run --no-sync pytest -q --cov=omni_eval
+      - name: Check dependency lock
+        run: uv lock --check
+      - name: Install locked development dependencies
+        run: uv sync --locked --group dev
+      - name: Check lint and formatting
+        run: make check
+      - name: Check strict types
+        run: make typecheck
+      - name: Run tests with coverage
+        run: uv run --no-sync pytest -q --cov=omni_eval
       - name: Air-gapped dry runs
         run: |
           for command in 'init' 'validate' 'evaluate' 'compare' 'replay' 'report' 'doctor' 'judge' 'runner' 'serve'; do

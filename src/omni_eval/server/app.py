@@ -6,6 +6,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse
 
 from omni_eval.core.metric_registry import MetricRegistry
+from omni_eval.schemas.run_result import RunResult
 from omni_eval.storage.file_run_repository import FileRunRepository
 
 
@@ -37,7 +38,7 @@ def create_app(root: str | Path) -> FastAPI:
             if path.is_dir() and not path.name.startswith(".")
         )
 
-    def verified_run(run_id: str):
+    def verified_run(run_id: str) -> RunResult:
         if not run_id.isalnum() or len(run_id) != 32:
             raise HTTPException(status_code=400, detail="invalid run ID")
 

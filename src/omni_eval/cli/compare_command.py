@@ -4,6 +4,7 @@ import typer
 
 from omni_eval.api import compare, evaluate
 from omni_eval.fixtures.fixture_predictions import classification_fixture
+from omni_eval.schemas.run_result import RunResult
 
 
 def compare_command(
@@ -16,6 +17,9 @@ def compare_command(
     gate_min_delta: float | None = typer.Option(None, "--gate-min-delta"),
     fail_on_inconclusive: bool = typer.Option(False, "--fail-on-inconclusive"),
 ) -> None:
+    left: RunResult | Path
+    right: RunResult | Path
+
     if dry_run:
         from omni_eval.schemas.prediction_record import PredictionRecord
 

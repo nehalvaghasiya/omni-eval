@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from functools import partial
 from typing import Any
 
 from omni_eval.core.evaluation_engine import _sample_metric
@@ -42,6 +43,19 @@ def _metric_from_pairs(
     return sum(
         _sample_metric(name, sample, pred, settings) for sample, pred in rows
     ) / len(rows)
+
+
+def _paired_delta(
+    indices: list[int],
+    *,
+    name: str,
+    paired_rows: list[tuple[EvalSample, PredictionRecord, PredictionRecord]],
+    settings: dict[str, Any],
+) -> float:
+    a = [(paired_rows[i][0], paired_rows[i][1]) for i in indices]
+    b = [(paired_rows[i][0], paired_rows[i][2]) for i in indices]
+
+    return _metric_from_pairs(name, b, settings) - _metric_from_pairs(name, a, settings)
 
 
 class PairedComparator:
@@ -168,15 +182,12 @@ class PairedComparator:
                 continue
 
             try:
-
-                def delta(indices: list[int]) -> float:
-                    a = [(paired_rows[i][0], paired_rows[i][1]) for i in indices]
-                    b = [(paired_rows[i][0], paired_rows[i][2]) for i in indices]
-
-                    return _metric_from_pairs(name, b, settings) - _metric_from_pairs(
-                        name, a, settings
-                    )
-
+                delta = partial(
+                    _paired_delta,
+                    name=name,
+                    paired_rows=paired_rows,
+                    settings=settings,
+                )
                 estimate = delta(list(range(len(paired_rows))))
                 interval = paired_bootstrap_statistic(
                     len(paired_rows),

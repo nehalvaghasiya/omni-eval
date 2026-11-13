@@ -1,9 +1,12 @@
+from typing import get_type_hints
+
 import pytest
 
 from omni_eval.api import compare, evaluate
 from omni_eval.comparison.gate_evaluator import GateEvaluator
 from omni_eval.comparison.slice_comparator import SliceComparator
 from omni_eval.exceptions import InputError
+from omni_eval.schemas.comparison_result import ComparisonResult
 from omni_eval.schemas.prediction_record import PredictionRecord
 
 
@@ -35,6 +38,35 @@ def test_comparison_refuses_different_dataset(classifier):
 
     with pytest.raises(InputError, match="dataset"):
         compare(left, right, iterations=100)
+
+
+def test_compare_public_return_annotation_resolves():
+    assert get_type_hints(compare)["return"] == list[ComparisonResult]
+
+
+def test_bootstrap_callbacks_keep_each_metrics_inputs(classifier, monkeypatch):
+    samples, predictions = classifier
+    improved = [PredictionRecord.model_validate(p.model_dump()) for p in predictions]
+    improved[2].output["label"] = "yes"
+    left = evaluate(samples, predictions, ["accuracy", "brier_score"])
+    right = evaluate(samples, improved, ["accuracy", "brier_score"])
+    callbacks = []
+
+    def capture_callback(n, callback, **settings):
+        callbacks.append((n, callback))
+
+        return (0.0, 0.0)
+
+    monkeypatch.setattr(
+        "omni_eval.comparison.paired_comparator.paired_bootstrap_statistic",
+        capture_callback,
+    )
+    results = compare(left, right, iterations=100)
+
+    assert [result.metric for result in results] == ["accuracy", "brier_score"]
+    assert [callback(list(range(n))) for n, callback in callbacks] == pytest.approx(
+        [1 / 3, 0.0]
+    )
 
 
 def test_gate_pass_fail_inconclusive(classifier):

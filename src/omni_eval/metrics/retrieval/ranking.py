@@ -1,7 +1,6 @@
 """Stable rank semantics: explicit ranks, ascending; ties are invalid upstream."""
 
 import math
-from typing import Any
 
 
 def ranking_metric(

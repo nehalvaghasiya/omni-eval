@@ -11,5 +11,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
-      - run: uv sync --locked --group dev
-      - run: uv run --no-sync pytest tests/integration tests/contracts tests/security -q
+        with:
+          version: '0.12.1'
+          python-version: '3.12'
+      - name: Check dependency lock
+        run: uv lock --check
+      - name: Install locked development dependencies
+        run: uv sync --locked --group dev
+      - name: Run integration, contract, and security tests
+        run: uv run --no-sync pytest tests/integration tests/contracts tests/security -q

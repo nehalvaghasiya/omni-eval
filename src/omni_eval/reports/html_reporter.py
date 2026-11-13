@@ -7,7 +7,9 @@ class HtmlReporter:
     """HTML-escaped static report; no untrusted markup executes."""
 
     def render(self, run: RunResult) -> str:
-        esc = lambda value: html.escape(str(value), quote=True)
+        def esc(value: object) -> str:
+            return html.escape(str(value), quote=True)
+
         marker = (
             "<h2>DRY RUN / SYNTHETIC — NOT A BENCHMARK</h2>"
             if run.manifest.is_fixture

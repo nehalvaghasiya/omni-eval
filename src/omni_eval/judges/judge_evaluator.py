@@ -131,7 +131,6 @@ class JudgeEvaluator:
 
     @staticmethod
     def _exists(path: str, sample: EvalSample, prediction: PredictionRecord) -> bool:
-        from omni_eval.exceptions import InputError
         from omni_eval.sources.field_mapper import get_path
 
         payload = {
