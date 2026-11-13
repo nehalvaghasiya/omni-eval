@@ -1,0 +1,1 @@
+{"sample_id":"rag1","output":{"answer":"30 days","citations":["policy#4"]},"contexts":[{"document_id":"policy","chunk_id":"policy#4","rank":1,"text":"Refunds within 30 days."}],"extensions":{}}
