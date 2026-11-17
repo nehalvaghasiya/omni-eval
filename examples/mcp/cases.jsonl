@@ -1,0 +1,1 @@
+{"id":"m1","input":"create draft","expected":{"state":{"draft_created":true},"allowed_tools":["calendar/create_draft"]},"actual":{"final":"done"},"contexts":[],"trace":{"steps":[{"kind":"tool_call","name":"calendar/create_draft","args":{},"ok":true}],"state":{"draft_created":true},"events":[]},"meta":{},"extensions":{}}

@@ -1,0 +1,3 @@
+{"id":"c1","input":"request a","expected":{"label":"A"},"actual":{"label":"A"},"probs":{"labels":["A","B"],"values":[0.9,0.1],"kind":"softmax"},"contexts":[],"meta":{},"extensions":{}}
+{"id":"c2","input":"request b","expected":{"label":"A"},"actual":{"label":"B"},"probs":{"labels":["A","B"],"values":[0.2,0.8],"kind":"softmax"},"contexts":[],"meta":{},"extensions":{}}
+{"id":"c3","input":"request c","expected":{"label":"B"},"actual":{"label":"B"},"probs":{"labels":["A","B"],"values":[0.4,0.6],"kind":"softmax"},"contexts":[],"meta":{},"extensions":{}}

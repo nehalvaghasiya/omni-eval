@@ -1,0 +1,4 @@
+version: 1
+name: text-example
+task: text
+data: cases.jsonl

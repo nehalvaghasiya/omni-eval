@@ -1,0 +1,1 @@
+{"id":"g1","input":"refund?","expected":{"answer":"30 days","relevant_ids":["d1"]},"actual":{"answer":"30 days","citations":["d1"]},"contexts":[{"id":"d1","rank":1,"text":"30 days"}],"meta":{},"extensions":{}}

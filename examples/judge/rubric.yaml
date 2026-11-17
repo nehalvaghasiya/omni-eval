@@ -1,0 +1,9 @@
+id: relevance
+version: "1"
+criterion: Does the generated answer address the supplied question?
+anchors:
+  "0": Completely irrelevant answer
+  "1": Fully relevant answer
+required: [input, actual]
+low: 0
+high: 1

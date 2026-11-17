@@ -1,251 +1,143 @@
-"""Stable typed API shared by CLI and optional API server."""
+"""Five easy public entry points; single shared engine."""
 
 from collections.abc import Iterable
 from pathlib import Path
+from typing import Any
 
-import yaml
-
-from omni_eval.core.capability_registry import preflight
-from omni_eval.core.evaluation_engine import EvaluationEngine
-from omni_eval.exceptions import InputError
-from omni_eval.fixtures.fixture_predictions import classification_fixture
-from omni_eval.schemas.comparison_result import ComparisonResult
-from omni_eval.schemas.eval_sample import EvalSample
-from omni_eval.schemas.metric_spec import MetricSpec
-from omni_eval.schemas.prediction_record import PredictionRecord
-from omni_eval.schemas.run_result import RunResult
-from omni_eval.schemas.run_spec import RunSpec
-from omni_eval.sources.jsonl_loader import load_jsonl
-from omni_eval.storage.file_run_repository import FileRunRepository
-
-
-def load_spec(path: str | Path) -> RunSpec:
-    """Read the documented YAML/JSON run specification without executing templates."""
-    try:
-        with Path(path).open(encoding="utf-8") as source:
-            config = yaml.safe_load(source)
-
-        return RunSpec.model_validate(config)
-    except (OSError, ValueError, yaml.YAMLError) as exc:
-        raise InputError(f"invalid run specification {path}: {exc}") from exc
+from omni_eval.core.compare import Comparator
+from omni_eval.core.engine import Engine
+from omni_eval.core.registry import Registry
+from omni_eval.fixtures.data import cases as demo_cases
+from omni_eval.sources.file import FileSource
+from omni_eval.storage.store import Store
+from omni_eval.types.case import Case
+from omni_eval.types.config import Config
+from omni_eval.types.run import Run
 
 
 def evaluate(
-    samples: str | Path | Iterable[EvalSample] | RunSpec | None = None,
-    predictions: str | Path | Iterable[PredictionRecord] | None = None,
-    metrics: list[str] | list[MetricSpec] | None = None,
-    output_dir: str | Path | None = None,
+    data: str | Path | Config | Iterable[Case],
     *,
-    spec: RunSpec | None = None,
+    task: str | None = None,
+    predictions: str | None = None,
+    metrics: list[str] | None = None,
+    out: str | Path | None = None,
     dry_run: bool = False,
-    strict: bool = False,
-) -> RunResult:
-    """Score saved records or an explicitly approved endpoint; no implicit model calls.
+) -> Run:
+    """Evaluate one JSONL file, YAML configuration, typed config or iterable cases.
 
-    A run with ``dry_run=True`` always uses synthetic fixtures and a separate
-    temporary output root when writing, irrespective of any supplied target.
+    Invalid input raises ValueError; unprepared plugins raise RuntimeError.
+    With dry_run=True all data/model access is replaced by synthetic cases.
     """
-    if isinstance(samples, RunSpec):
-        spec = samples
-        samples = None
-
-    if spec is not None:
-        if metrics is not None or predictions is not None:
-            raise InputError("pass a RunSpec or individual fields, not both")
-
-        dry_run = dry_run or spec.dry_run
-        metrics_list = spec.metrics
+    if isinstance(data, Config):
+        config = data
+    elif isinstance(data, (str, Path)) and str(data).endswith((".yaml", ".yml")):
+        config = Config.from_file(data)
+    elif isinstance(data, (str, Path)):
+        if not task:
+            raise ValueError("task is required for a JSONL data file")
+        config = Config(task=task, data=str(data), predictions=predictions, metrics=metrics or [])
     else:
-        metrics_list = [
-            m if isinstance(m, MetricSpec) else MetricSpec(name=m)
-            for m in (metrics or ["accuracy"])
-        ]
+        if not task:
+            raise ValueError("task is required for iterable cases")
+        config = Config(task=task, data="<in-memory>", metrics=metrics or [])
+    if metrics is not None:
+        config = config.model_copy(update={"metrics": metrics})
+    if predictions is not None:
+        config = config.model_copy(update={"predictions": predictions})
+    if config.plugin and (not dry_run):
+        from omni_eval.plugins.catalog import Catalog
 
-    judge_metrics = [
-        metric for metric in metrics_list if metric.name.startswith("judge_")
-    ]
-    native_metrics = [
-        metric for metric in metrics_list if not metric.name.startswith("judge_")
-    ]
-
-    if judge_metrics and (spec is None or spec.judge is None) and not dry_run:
-        raise InputError(
-            "judge metrics require an explicitly selected, approved RunSpec.judge"
+        Catalog().require(config.plugin)
+        raise RuntimeError(
+            f"suite execution for {config.plugin!r} requires a qualified isolated worker"
         )
-
     if dry_run:
-        records, outputs = classification_fixture()
-        metrics_list = [
-            m
-            for m in metrics_list
-            if m.name in {"accuracy", "macro_f1", "brier_score", "ece", "mcc"}
-        ] or [MetricSpec(name="accuracy")]
-        native_metrics = metrics_list
-        judge_metrics = []
-        mode = "fixture"
-    elif spec is not None:
-        if not spec.dataset:
-            raise InputError("dataset path is required in non-fixture RunSpec")
+        fixture_task = (
+            config.task
+            if config.task
+            in {
+                "classification",
+                "text",
+                "retrieval",
+                "rag",
+                "agent",
+                "mcp",
+                "audio",
+                "vision",
+                "security",
+                "code",
+                "sql",
+            }
+            else "classification"
+        )
+        source = demo_cases(fixture_task)
+        if config.plugin or any(":" in name for name in config.metrics):
+            config = config.model_copy(update={"metrics": ["fixture:echo"]})
+        elif config.metrics:
+            # A dry run must exercise the requested metric, never quietly select
+            # a different one. Dynamic names such as recall@5 are supported.
+            from omni_eval.core.planner import Planner
 
-        records = load_jsonl(spec.dataset, EvalSample)
-        preflight(records, native_metrics)
-        mode = spec.source.mode
-
-        if mode == "offline":
-            if spec.source.predictions is None:
-                raise InputError("offline predictions path missing")
-
-            outputs = load_jsonl(spec.source.predictions, PredictionRecord)
-        elif mode == "replay":
-            if spec.source.replay_path is None:
-                raise InputError("replay path missing")
-
-            old = FileRunRepository().load(spec.source.replay_path)
-            from omni_eval.sources.source_fingerprint import hash_canonical
-
-            dataset_hash = hash_canonical(
-                [
-                    s.model_dump(mode="json")
-                    for s in sorted(records, key=lambda s: s.sample_id)
-                ]
-            )
-
-            if old.manifest.dataset_hash != dataset_hash:
-                raise InputError("replay dataset fingerprint mismatch")
-
-            outputs = old.predictions
-        elif mode in {"endpoint", "hybrid"}:
-            from omni_eval.sources.http_prediction_source import HttpPredictionSource
-
-            if spec.source.target is None:
-                raise InputError("endpoint configuration missing")
-
-            outputs = HttpPredictionSource(spec.source.target).acquire(records)
-        else:
-            raise InputError(f"unrecognized source mode {mode}")
+            Planner().build(config, source)
+        if not config.metrics:
+            defaults = {
+                "security": ["attack_success"],
+                "code": ["code_valid"],
+                "sql": ["sql_select_safe"],
+            }
+            config = config.model_copy(update={"metrics": defaults.get(fixture_task, [])})
+        result = Engine().run(source, config, fixture=True)
     else:
-        if samples is None or predictions is None:
-            raise InputError(
-                "provide samples and predictions, or a RunSpec (or --dry-run)"
-            )
+        if isinstance(data, (str, Path, Config)):
+            if config.source == "replay":
+                from omni_eval.sources.replay import ReplaySource
 
-        records = (
-            load_jsonl(samples, EvalSample)
-            if isinstance(samples, str | Path)
-            else list(samples)
-        )
-        outputs = (
-            load_jsonl(predictions, PredictionRecord)
-            if isinstance(predictions, str | Path)
-            else list(predictions)
-        )
-        mode = "offline"
+                source = ReplaySource().acquire([], config)
+            else:
+                files = FileSource()
+                if config.source in {"http", "openai"}:
+                    if not config.data:
+                        raise ValueError("live target requires dataset")
+                    raw = Config.model_validate({**config.model_dump(), "predictions": None})
+                    source = files.read(raw)
+                    from omni_eval.core.planner import Planner
 
-    run = EvaluationEngine().evaluate(
-        records,
-        outputs,
-        native_metrics,
-        name=spec.name
-        if spec and not dry_run
-        else "DRY RUN / SYNTHETIC"
-        if dry_run
-        else "evaluation",
-        source_mode=mode,
-        is_fixture=dry_run,
-        strict=strict,
-        config=spec.model_dump(mode="json") if spec and not dry_run else None,
-    )
+                    Planner().build(config, source)
+                    if config.source == "http":
+                        from omni_eval.sources.http import HttpSource
 
-    if judge_metrics and spec is not None and spec.judge is not None:
-        from omni_eval.judges.builtin_rubrics import get_rubric
-        from omni_eval.judges.fixture_judge_client import FixtureJudgeClient
-        from omni_eval.judges.judge_evaluator import JudgeEvaluator
-        from omni_eval.judges.openai_compatible_judge_client import (
-            OpenAICompatibleJudgeClient,
-        )
+                        source = HttpSource().acquire(source, config)
+                    else:
+                        from omni_eval.sources.openai import OpenAISource
 
-        rubric = get_rubric(spec.judge.rubric_id)
-
-        if {metric.name for metric in judge_metrics} != {rubric.metric}:
-            raise InputError(
-                "selected judge metrics do not match the configured rubric"
-            )
-
-        client = (
-            FixtureJudgeClient()
-            if spec.judge.provider == "fixture"
-            else OpenAICompatibleJudgeClient(spec.judge)
-        )
-        judge_metric, judge_scores = JudgeEvaluator(
-            client, max_calls=spec.judge.max_calls
-        ).evaluate(records, outputs, rubric)
-        run.metrics.append(judge_metric)
-        run.sample_scores.extend(judge_scores)
-
-        if judge_metric.status != "completed":
-            run.manifest.status = "partial"
-
-        if isinstance(client, FixtureJudgeClient):
-            run.manifest.is_fixture = True
-            run.manifest.metadata["marker"] = "DRY RUN / SYNTHETIC — FIXTURE JUDGE"
-
-        run.manifest.metadata["rubric"] = rubric.model_dump(mode="json")
-
-    if mode == "hybrid" and spec is not None and spec.source.predictions:
-        baseline_predictions = load_jsonl(spec.source.predictions, PredictionRecord)
-        baseline_run = EvaluationEngine().evaluate(
-            records,
-            baseline_predictions,
-            native_metrics,
-            name=spec.name + " baseline",
-            source_mode="offline",
-        )
-        from omni_eval.comparison.paired_comparator import PairedComparator
-
-        comparisons = PairedComparator().compare(baseline_run, run, iterations=1000)
-        run.manifest.metadata["hybrid_baseline_hash"] = (
-            baseline_run.manifest.predictions_hash
-        )
-        run.manifest.metadata["hybrid_comparisons"] = [
-            result.model_dump(mode="json") for result in comparisons
-        ]
-
-    if output_dir is not None:
-        FileRunRepository().save(
-            run,
-            output_dir,
-            formats=tuple(spec.report.formats) if spec else ("json", "html"),
-            retain_records=spec.report.retain_records if spec else True,
-        )
-
-    return run
+                        source = OpenAISource().acquire(source, config)
+                else:
+                    source = files.read(config)
+        else:
+            source = [Case.model_validate(c) for c in data]
+        result = Engine().run(source, config)
+    target = out or config.output.get("dir")
+    if target:
+        path = Store().save(result, target)
+        result.path = path
+    return result
 
 
-def load_run(path: str | Path) -> RunResult:
-    """Load a saved immutable run, verifying every artifact hash."""
-    return FileRunRepository().load(path)
+def load(path: str | Path) -> Run:
+    return Store().load(path)
 
 
 def compare(
-    baseline: RunResult | str | Path,
-    candidate: RunResult | str | Path,
+    baseline: Run,
+    candidate: Run,
     *,
-    paired: bool = True,
-    confidence: float = 0.95,
+    metrics: list[str] | None = None,
     seed: int = 42,
-    iterations: int = 1000,
-) -> list[ComparisonResult]:
-    """Compare compatible saved runs with paired bootstrap intervals."""
-    from omni_eval.comparison.paired_comparator import PairedComparator
+    confidence: float = 0.95,
+) -> Any:
+    return Comparator().compare(baseline, candidate, metrics, seed=seed, confidence=confidence)
 
-    left = load_run(baseline) if isinstance(baseline, str | Path) else baseline
-    right = load_run(candidate) if isinstance(candidate, str | Path) else candidate
 
-    return PairedComparator().compare(
-        left,
-        right,
-        paired=paired,
-        confidence=confidence,
-        seed=seed,
-        iterations=iterations,
-    )
+def metrics(task: str | None = None) -> list[str]:
+    return Registry().list(task)

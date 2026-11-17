@@ -1,0 +1,1 @@
+{"id":"s1","input":"simulated prompt injection","expected":{"oracle":{"expected_value":true}},"actual":{"oracle_result":{"verified":true,"value":false}},"contexts":[],"meta":{},"extensions":{}}

@@ -1,18 +1,27 @@
-from collections import Counter
+"""Token precision/recall/F1 from normalized word multisets."""
 
-from omni_eval.metrics.shared.tokenize import tokenize
+from typing import Any
+
+from omni_eval.metrics.base import Metric
+from omni_eval.metrics.data import answer
+from omni_eval.metrics.text.tokens import rates
+from omni_eval.types.batch import Batch
+from omni_eval.types.case import Case
+from omni_eval.types.score import Score
 
 
-def token_scores(prediction: str, reference: str) -> tuple[float, float, float]:
-    a = Counter(tokenize(prediction))
-    b = Counter(tokenize(reference))
-    common = sum((a & b).values())
+class TokenF1(Metric):
+    name = "token_f1"
+    tasks = frozenset({"text", "rag", "audio"})
+    needs = frozenset({"expected", "actual"})
 
-    if not a and not b:
-        return 1.0, 1.0, 1.0
+    def _point(self, case: Case, settings: dict[str, Any]) -> float:
+        actual = answer(case)
+        expected = answer(case, truth=True)
+        if actual is None or expected is None:
+            raise ValueError("requires text")
+        index = {"token_precision": 0, "token_recall": 1, "token_f1": 2}[self.name]
+        return rates(actual, expected)[index]
 
-    precision = common / sum(a.values()) if a else 0.0
-    recall = common / sum(b.values()) if b else 0.0
-    f1 = 2 * precision * recall / (precision + recall) if precision + recall else 0.0
-
-    return precision, recall, f1
+    def compute(self, batch: Batch, settings: dict[str, Any] | None = None) -> Score:
+        return self.sample_score(batch, settings)

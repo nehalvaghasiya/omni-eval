@@ -1,86 +1,56 @@
 [build-system]
-requires = ["setuptools>=75", "wheel>=0.44"]
+requires = ["setuptools>=75", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "omni-eval"
-version = "0.1.0"
-description = "Reproducible evaluation for saved and live AI predictions"
-readme = "README.md"
+version = "0.2.0"
 requires-python = ">=3.11,<3.14"
+description = "Simple, evidence-based evaluation for AI predictions, RAG and agents"
+readme = "README.md"
 license = "MIT"
+keywords = ["ai", "evaluation", "rag", "llm", "retrieval", "agents"]
 authors = [{name = "OmniEval contributors"}]
-keywords = ["evaluation", "machine-learning", "llm", "rag", "agent", "metrics"]
-classifiers = ["Programming Language :: Python :: 3", "Programming Language :: Python :: 3.11", "Programming Language :: Python :: 3.12", "Programming Language :: Python :: 3.13"]
-dependencies = [
-  "pydantic>=2.7,<3", "typer>=0.12,<1", "httpx>=0.27,<1",
-  "numpy>=1.26,<3", "scikit-learn>=1.5,<2", "PyYAML>=6,<7",
-  "jsonschema>=4.20,<5",
-]
+dependencies = ["pydantic>=2.7,<3", "typer>=0.12,<1", "PyYAML>=6,<7", "httpx>=0.27,<1", "jsonschema>=4.20,<5"]
 
 [project.scripts]
 omni-eval = "omni_eval.cli.app:main"
 
 [project.optional-dependencies]
+stats = ["scikit-learn>=1.5,<2", "numpy>=1.26,<3"]
 api = ["fastapi>=0.115,<1", "uvicorn>=0.30,<1"]
 parquet = ["pyarrow>=18,<30"]
-text = ["rouge-score>=0.1,<1", "sacrebleu>=2,<3", "jiwer>=3,<5"]
-ragas = ["ragas>=0.2"]
-deepeval = ["deepeval>=2"]
 
 [dependency-groups]
-dev = [
-  "pytest>=8,<10",
-  "pytest-cov>=5,<8",
-  "ruff==0.9.10",
-  "mypy>=1.12,<2",
-  "respx>=0.21,<1",
-  "build>=1,<2",
-  "types-PyYAML>=6",
-  "types-jsonschema>=4.20",
-  # Type-check and test the optional API while keeping core installs lean.
-  "fastapi>=0.115,<1",
-  "uvicorn>=0.30,<1",
-]
+dev = ["pytest>=8,<10", "pytest-cov>=5,<8", "ruff>=0.9,<1", "mypy>=1.12,<2", "respx>=0.21,<1", "build>=1,<2", "twine>=6,<7", "pre-commit>=4,<5", "hypothesis>=6,<7", "types-PyYAML>=6"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.setuptools.package-data]
+"omni_eval.plugins" = ["catalog.json"]
+"omni_eval" = ["py.typed"]
+
 [tool.ruff]
 target-version = "py311"
-line-length = 88
-indent-width = 4
-required-version = "==0.9.10"
+line-length = 100
 
 [tool.ruff.lint]
-select = ["E4", "E7", "E9", "F", "I", "UP", "B", "SIM"]
-# Automatic fixes are limited to imports so formatting preserves program logic.
-fixable = ["I"]
-
-[tool.ruff.lint.isort]
-known-first-party = ["omni_eval"]
-
-[tool.ruff.lint.flake8-bugbear]
-# Typer consumes these declarative option descriptors as command metadata.
-extend-immutable-calls = ["typer.Option"]
-
-[tool.ruff.format]
-quote-style = "double"
-indent-style = "space"
-skip-magic-trailing-comma = false
-line-ending = "lf"
-
-[tool.mypy]
-# Follow the active interpreter so dependency stubs match each CI matrix entry.
-strict = true
-warn_unused_ignores = true
-plugins = ["pydantic.mypy"]
-
-[[tool.mypy.overrides]]
-# Untyped external libraries; Parquet is also optional in core installations.
-module = ["sklearn", "sklearn.*", "pyarrow", "pyarrow.*"]
-ignore_missing_imports = true
+select = ["E4", "E7", "E9", "F", "I", "B", "UP"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-ra"
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_unused_ignores = true
+
+[[tool.mypy.overrides]]
+module = ["yaml", "yaml.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["pyarrow", "pyarrow.*", "jsonschema", "jsonschema.*"]
+ignore_missing_imports = true

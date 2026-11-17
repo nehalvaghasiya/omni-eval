@@ -1,0 +1,159 @@
+{
+  "protocol": 1,
+  "providers": {
+    "ragas": {
+      "status": "planned",
+      "operation": "score",
+      "version": null,
+      "qualified": false,
+      "description": "Planned isolated upstream integration; not qualified for execution."
+    },
+    "deepeval": {
+      "status": "planned",
+      "operation": "score",
+      "version": null,
+      "qualified": false,
+      "description": "Planned isolated upstream integration; not qualified for execution."
+    },
+    "text": {
+      "status": "planned",
+      "operation": "score",
+      "version": null,
+      "qualified": false,
+      "description": "Planned isolated upstream integration; not qualified for execution."
+    },
+    "garak": {
+      "status": "planned",
+      "operation": "suite",
+      "version": null,
+      "qualified": false,
+      "description": "Planned isolated upstream integration; not qualified for execution."
+    },
+    "promptfoo": {
+      "status": "planned",
+      "operation": "suite",
+      "version": null,
+      "qualified": false,
+      "description": "Planned isolated upstream integration; not qualified for execution."
+    },
+    "inspect": {
+      "status": "planned",
+      "operation": "suite",
+      "version": null,
+      "qualified": false,
+      "description": "Planned isolated upstream integration; not qualified for execution."
+    },
+    "lm_eval": {
+      "status": "planned",
+      "operation": "suite",
+      "version": null,
+      "qualified": false,
+      "description": "Planned isolated upstream integration; not qualified for execution."
+    },
+    "lmms": {
+      "status": "planned",
+      "operation": "suite",
+      "version": null,
+      "qualified": false,
+      "description": "Planned isolated upstream integration; not qualified for execution."
+    },
+    "mteb": {
+      "status": "planned",
+      "operation": "suite",
+      "version": null,
+      "qualified": false,
+      "description": "Planned isolated upstream integration; not qualified for execution."
+    },
+    "torchmetrics": {
+      "status": "planned",
+      "operation": "score",
+      "version": null,
+      "qualified": false,
+      "description": "Planned isolated upstream integration; not qualified for execution."
+    },
+    "pyannote": {
+      "status": "planned",
+      "operation": "score",
+      "version": null,
+      "qualified": false,
+      "description": "Planned isolated upstream integration; not qualified for execution."
+    },
+    "skillspector": {
+      "status": "planned",
+      "operation": "suite",
+      "version": null,
+      "qualified": false,
+      "description": "Planned isolated upstream integration; not qualified for execution."
+    },
+    "semgrep": {
+      "status": "planned",
+      "operation": "suite",
+      "version": null,
+      "qualified": false,
+      "description": "Planned isolated upstream integration; not qualified for execution."
+    },
+    "gitleaks": {
+      "status": "planned",
+      "operation": "suite",
+      "version": null,
+      "qualified": false,
+      "description": "Planned isolated upstream integration; not qualified for execution."
+    },
+    "trufflehog": {
+      "status": "planned",
+      "operation": "suite",
+      "version": null,
+      "qualified": false,
+      "description": "Planned isolated upstream integration; not qualified for execution."
+    },
+    "osv": {
+      "status": "planned",
+      "operation": "suite",
+      "version": null,
+      "qualified": false,
+      "description": "Planned isolated upstream integration; not qualified for execution."
+    },
+    "pip_audit": {
+      "status": "planned",
+      "operation": "suite",
+      "version": null,
+      "qualified": false,
+      "description": "Planned isolated upstream integration; not qualified for execution."
+    },
+    "zizmor": {
+      "status": "planned",
+      "operation": "suite",
+      "version": null,
+      "qualified": false,
+      "description": "Planned isolated upstream integration; not qualified for execution."
+    },
+    "opentelemetry": {
+      "status": "planned",
+      "operation": "export",
+      "version": null,
+      "qualified": false,
+      "description": "Planned isolated upstream integration; not qualified for execution."
+    },
+    "phoenix": {
+      "status": "planned",
+      "operation": "export",
+      "version": null,
+      "qualified": false,
+      "description": "Planned isolated upstream integration; not qualified for execution."
+    },
+    "fixture": {
+      "status": "ready",
+      "operation": "score",
+      "version": "1",
+      "qualified": false,
+      "description": "Synthetic protocol demonstration only, NOT a real external framework."
+    },
+    "judge": {
+      "status": "ready",
+      "operation": "score",
+      "version": "1",
+      "qualified": false,
+      "description": "Explicit user-configured rubric judge via an approved OpenAI-compatible endpoint; backend model quality unverified."
+    }
+  }
+}

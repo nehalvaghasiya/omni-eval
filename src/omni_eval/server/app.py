@@ -1,67 +1,42 @@
-"""Local read-only run explorer; never schedules side-effecting evaluation jobs."""
+"""Read-only FastAPI app, loopback only until authenticated server exists."""
 
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import HTMLResponse
 
-from omni_eval.core.metric_registry import MetricRegistry
-from omni_eval.schemas.run_result import RunResult
-from omni_eval.storage.file_run_repository import FileRunRepository
+from omni_eval.core.registry import Registry
+from omni_eval.storage.store import Store
 
 
-def create_app(root: str | Path) -> FastAPI:
-    app = FastAPI(title="OmniEval read-only local API", docs_url="/docs")
-    runs_dir = Path(root).resolve()
+def create_app(runs: str | Path) -> FastAPI:
+    """Create a local-only run browser; caller must bind to loopback."""
+    app = FastAPI(title="OmniEval local run browser", version="0.2.0", docs_url=None)
+    root = Path(runs).resolve()
 
     @app.get("/health")
     def health() -> dict[str, str]:
         return {"status": "ok"}
 
     @app.get("/metrics")
-    def metrics() -> list[dict[str, object]]:
-        return [
-            vars(descriptor)
-            if hasattr(descriptor, "__dict__")
-            else {"id": descriptor.id, "family": descriptor.family}
-            for descriptor in MetricRegistry().list()
-        ]
+    def metrics() -> list[str]:
+        return Registry().list()
 
     @app.get("/runs")
-    def runs() -> list[str]:
-        if not runs_dir.exists():
-            return []
-
-        return sorted(
-            path.name
-            for path in runs_dir.iterdir()
-            if path.is_dir() and not path.name.startswith(".")
+    def list_runs() -> list[str]:
+        return (
+            sorted(p.name for p in root.iterdir() if p.is_dir() and (p / "checksums.json").exists())
+            if root.exists()
+            else []
         )
-
-    def verified_run(run_id: str) -> RunResult:
-        if not run_id.isalnum() or len(run_id) != 32:
-            raise HTTPException(status_code=400, detail="invalid run ID")
-
-        try:
-            return FileRunRepository().load(runs_dir / run_id)
-        except Exception:
-            raise HTTPException(
-                status_code=404, detail="run not found or invalid"
-            ) from None
 
     @app.get("/runs/{run_id}")
     def get_run(run_id: str) -> dict[str, object]:
-        run = verified_run(run_id)
-
-        return {
-            "manifest": run.manifest.model_dump(mode="json"),
-            "metrics": [metric.model_dump(mode="json") for metric in run.metrics],
-        }
-
-    @app.get("/reports/{run_id}", response_class=HTMLResponse)
-    def get_report(run_id: str) -> str:
-        from omni_eval.reports.html_reporter import HtmlReporter
-
-        return HtmlReporter().render(verified_run(run_id))
+        if not run_id.isalnum():
+            raise HTTPException(400, "invalid run ID")
+        path = root / run_id
+        try:
+            return Store().load(path).summary
+        except (FileNotFoundError, ValueError) as exc:
+            raise HTTPException(404, "run not found or invalid") from exc
 
     return app
