@@ -8,7 +8,7 @@ retrieval, RAG, agent, and latency metrics.
 > **Status: implementation snapshot.** This is not a production-certified or
 > PyPI-published release.
 
-[Quick start](#quick-start) · [Python API](#python-api) · [CLI reference](#cli-reference) · [Input contract](#input-contract) · [Endpoints and judges](#endpoints-and-judges) · [Supported vs. not shipped](#supported-vs-not-shipped) · [Development](#development)
+[Quick start](#quick-start) · [Python API](#python-api) · [CLI reference](#cli-reference) · [Input contract](#input-contract) · [Endpoints and judges](#endpoints-and-judges) · [Development](#development)
 
 ## Quick start
 
@@ -186,31 +186,6 @@ configuration, or `--dry-run` for a clearly synthetic fixture. See
 
 **External judge scores are estimates, not ground-truth oracle verdicts.**
 
-## Supported vs. not shipped
-
-### Implemented and locally tested
-
-| Area | Current capabilities |
-| --- | --- |
-| Record ingestion | Canonical JSONL readers and CSV readers with explicit Python field mapping |
-| Classification and calibration | Label metrics, confusion matrices, probability calibration, and ranking metrics |
-| Text and structured output | Exact match, token scores, JSON validity, schema compliance, and ASR error rates |
-| Retrieval and RAG | Rank-based retrieval metrics and citation ID validity |
-| Agents and security evidence | State, tool-permission, and trajectory checks; oracle-verified attack result ingestion |
-| Performance | Latency aggregates with explicit timing provenance |
-| Run comparison | Paired comparisons, bootstrap intervals, and coverage gates through the Python API |
-| Artifacts and reports | Immutable filesystem runs, integrity checks, and static reports |
-| Local services | A local HTTP prediction source and an optional read-only API |
-| External runner evidence | A generic typed result importer; `runner --dry-run` uses synthetic results |
-
-### Not shipped in this snapshot
-
-- Execution or sandbox orchestration of external benchmark and security runners.
-- Complete Ragas or DeepEval scoring integrations; the current adapters only
-  check optional dependency availability.
-- A web dashboard, hosted multi-user service, or evaluation job scheduling API.
-- General-purpose multimodal model execution or end-to-end image, audio, and
-  video benchmark suites.
 
 
 ## Development
