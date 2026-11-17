@@ -1,8 +1,0 @@
-# Safety checks only count verified scenario oracles, not classifier flags.
-schema_version: "1.0"
-name: example-security
-source: {mode: offline, predictions: examples/agent/predictions.jsonl}
-dataset: examples/agent/samples.jsonl
-metrics:
-  - name: unauthorized_tool_rate
-report: {formats: [json, html]}

@@ -1,0 +1,5 @@
+version: 1
+name: sql-example
+task: sql
+data: cases.jsonl
+metrics: [sql_select_safe]

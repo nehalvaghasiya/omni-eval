@@ -1,1 +1,0 @@
-{"sample_id":"a1","output":{"final":"Draft created"},"trace":{"steps":[{"index":0,"kind":"tool_call","tool":"calendar/create_draft","arguments":{"title":"Review"},"result":{"ok":true}}],"observed_state":{"draft_created":true}},"extensions":{}}

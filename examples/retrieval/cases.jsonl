@@ -1,0 +1,1 @@
+{"id":"r1","input":"query","expected":{"relevant_ids":["d1","d3"]},"actual":{"answer":""},"contexts":[{"id":"d1","rank":1,"text":"answer"},{"id":"d2","rank":2,"text":"other"}],"meta":{},"extensions":{}}

@@ -1,3 +1,0 @@
-{"sample_id":"c1","input":{"text":"Please reset my password"},"reference":{"label":"account"},"metadata":{"slice":"support"},"extensions":{}}
-{"sample_id":"c2","input":{"text":"Charged twice"},"reference":{"label":"billing"},"metadata":{"slice":"support"},"extensions":{}}
-{"sample_id":"c3","input":{"text":"Refund my invoice"},"reference":{"label":"billing"},"metadata":{"slice":"billing"},"extensions":{}}

@@ -1,0 +1,4 @@
+version: 1
+name: classification-example
+task: classification
+data: cases.jsonl

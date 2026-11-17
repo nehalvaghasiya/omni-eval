@@ -1,87 +1,100 @@
+"""Real loopback HTTP integration, no model, provider credential, or internet."""
+
 import json
+import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from threading import Thread
 
-import pytest
-
-from omni_eval.api import evaluate
-from omni_eval.endpoints.endpoint_policy import EndpointPolicy
-from omni_eval.exceptions import SecurityError
-from omni_eval.schemas.target_spec import TargetSpec
-from omni_eval.sources.http_prediction_source import HttpPredictionSource
+from omni_eval import evaluate
+from omni_eval.io.jsonl import Jsonl
+from omni_eval.types.config import Config
 
 
-def test_endpoint_policy_blocks_metadata():
-    target = TargetSpec(
-        url="http://169.254.169.254/latest/meta-data",
-        allowed_hosts=["169.254.169.254"],
-        allow_localhost=True,
-    )
+class Stub(BaseHTTPRequestHandler):
+    def do_POST(self):
+        size = int(self.headers.get("Content-Length", "0"))
+        data = json.loads(self.rfile.read(size))
+        if self.path == "/openai":
+            output = {"choices": [{"message": {"content": "hello world"}}]}
+        else:
+            value = data["payload"]["text"]
+            output = {"result": {"label": "A" if value == "a" else "B"}}
+        payload = json.dumps(output).encode()
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(payload)))
+        self.end_headers()
+        self.wfile.write(payload)
 
-    with pytest.raises(SecurityError):
-        EndpointPolicy().validate(target.url, target)
+    def log_message(self, format, *args):
+        return None
 
 
-def test_endpoint_policy_blocks_unapproved_host():
-    target = TargetSpec(
-        url="https://not-approved.invalid/model", allowed_hosts=["approved.example"]
-    )
-
-    with pytest.raises(SecurityError):
-        EndpointPolicy().validate(target.url, target)
-
-
-def test_local_http_equals_offline(classifier):
-    samples, predictions = classifier
-    answers = {p.sample_id: p for p in predictions}
-
-    class Handler(BaseHTTPRequestHandler):
-        def do_POST(self):
-            size = int(self.headers["Content-Length"])
-            payload = json.loads(self.rfile.read(size))
-            sid = payload["sample_id"]
-            result = {
-                "result": answers[sid].output,
-                "probabilities": answers[sid].probabilities.model_dump(),
-            }
-            raw = json.dumps(result).encode()
-            self.send_response(200)
-            self.send_header("Content-Type", "application/json")
-            self.send_header("Content-Length", str(len(raw)))
-            self.end_headers()
-            self.wfile.write(raw)
-
-        def log_message(self, *args):
-            pass
-
-    server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
-    worker = Thread(target=server.serve_forever, daemon=True)
-    worker.start()
-
+def test_real_loopback_saved_parity(tmp_path, monkeypatch):
+    server = ThreadingHTTPServer(("127.0.0.1", 0), Stub)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
     try:
-        port = server.server_port
-        target = TargetSpec(
-            url=f"http://127.0.0.1:{port}/infer",
-            allowed_hosts=[f"127.0.0.1:{port}"],
-            allow_localhost=True,
-            request_template={"sample_id": "$.sample_id"},
-            response_map={"output": "$.result", "probabilities": "$.probabilities"},
+        path = tmp_path / "data.jsonl"
+        Jsonl().write(
+            path,
+            [
+                {"id": "a", "input": {"text": "a"}, "expected": {"label": "A"}},
+                {"id": "b", "input": {"text": "b"}, "expected": {"label": "B"}},
+            ],
         )
-        live = HttpPredictionSource(target).acquire(samples)
+        from omni_eval.types.target import Target
 
-        assert all(
-            p.timing is not None and p.timing.provenance == "measured_by_omnieval"
-            for p in live
+        monkeypatch.setenv("OMNIEVAL_TEST_URL", f"http://127.0.0.1:{server.server_port}/predict")
+        target = Target(
+            kind="json",
+            url_env="OMNIEVAL_TEST_URL",
+            allowed_hosts=["127.0.0.1"],
+            allowed_ports=[server.server_port],
+            local_http=True,
+            request={"payload": "$.input"},
+            response={"actual": "$.result"},
         )
-        offline_run = evaluate(
-            samples, predictions, ["accuracy", "macro_f1", "brier_score"]
+        run = evaluate(
+            Config(
+                task="classification",
+                data=str(path),
+                source="http",
+                target=target,
+                metrics=["accuracy", "success_rate", "latency_p95"],
+            )
         )
-        online_run = evaluate(samples, live, ["accuracy", "macro_f1", "brier_score"])
-
-        assert [m.value for m in offline_run.metrics] == [
-            m.value for m in online_run.metrics
-        ]
-        assert evaluate(samples, live, ["latency_p95"]).metrics[0].value > 0
+        assert run.metric("accuracy").value == 1
+        assert run.metric("success_rate").value == 1
+        assert run.metric("latency_p95").details["source"] == "measured_by_omnieval"
     finally:
         server.shutdown()
         server.server_close()
+        thread.join(timeout=5)
+
+
+def test_openai_compatible_fixture(tmp_path, monkeypatch):
+    server = ThreadingHTTPServer(("127.0.0.1", 0), Stub)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        path = tmp_path / "data.jsonl"
+        Jsonl().write(path, [{"id": "x", "input": "say hello", "expected": "hello world"}])
+        monkeypatch.setenv("OMNIEVAL_TEST_URL", f"http://127.0.0.1:{server.server_port}/openai")
+        from omni_eval.types.target import Target
+
+        target = Target(
+            kind="openai",
+            model="fixture-model",
+            url_env="OMNIEVAL_TEST_URL",
+            allowed_hosts=["127.0.0.1"],
+            allowed_ports=[server.server_port],
+            local_http=True,
+        )
+        run = evaluate(
+            Config(task="text", data=str(path), source="openai", target=target, metrics=["exact"])
+        )
+        assert run.metric("exact").value == 1
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=5)

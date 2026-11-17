@@ -1,0 +1,5 @@
+version: 1
+name: code-example
+task: code
+data: cases.jsonl
+metrics: [code_valid]

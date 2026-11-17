@@ -1,0 +1,4 @@
+version: 1
+name: audio-example
+task: audio
+data: cases.jsonl

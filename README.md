@@ -1,225 +1,177 @@
 # OmniEval
 
-A local-first, typed Python package for **evaluating saved AI predictions**,
-comparing runs, and optionally acquiring predictions from an explicitly allowed
-HTTP model endpoint. The same canonical records feed native classification, text,
-retrieval, RAG, agent, and latency metrics.
+One file, one command, transparent scores. Evaluate saved predictions, classification, text, retrieval, RAG, agent/MCP traces, transcripts, and synthetic security cases locally.
 
-> **Status: implementation snapshot.** This is not a production-certified or
-> PyPI-published release.
+> Development preview 0.2.0. The implemented offline workflows pass the local verification matrix on Python 3.11–3.13. Twenty upstream integrations are still planned and unavailable. See [verification evidence and limitations](IMPLEMENTATION.md).
 
-[Quick start](#quick-start) · [Python API](#python-api) · [CLI reference](#cli-reference) · [Input contract](#input-contract) · [Endpoints and judges](#endpoints-and-judges) · [Development](#development)
+## Start here
 
-## Quick start
-
-Requires **Python 3.11–3.13** and [uv](https://docs.astral.sh/uv/). From the
-repository root:
+Use Python 3.11, 3.12, or 3.13. For a minimal editable installation:
 
 ```bash
-uv sync --locked --group dev
-
-# Evaluate the included saved predictions
-uv run --no-sync omni-eval evaluate --config suites/basic.yaml
-uv run --no-sync omni-eval evaluate --config suites/rag.yaml
-uv run --no-sync omni-eval evaluate --config suites/agent.yaml
-
-# Try a synthetic evaluation without contacting a model endpoint
-uv run --no-sync omni-eval evaluate --dry-run
-
-# Run the test suite
-uv run --no-sync pytest -q
+python -m pip install -e .
+omni-eval demo classification
+omni-eval demo rag
+omni-eval init my-eval --task classification
+omni-eval run -c my-eval/eval.yaml --out runs
 ```
 
-The example suites cover [classification](suites/basic.yaml),
-[RAG](suites/rag.yaml), and [agents](suites/agent.yaml). Saved runs are written
-under `.omni-eval/runs/` by default.
+The demos use synthetic cases and run real native scoring without model keys or downloads. `init` creates a runnable configuration for any of the 11 tasks: `classification`, `text`, `retrieval`, `rag`, `agent`, `mcp`, `audio`, `vision`, `security`, `code`, and `sql`.
 
-The repository includes `uv.lock`; use `--locked` to install its verified dependency
-versions. Installation on a clean machine requires access to a Python package
-index. Run `uv lock` when intentionally updating dependency requirements.
+Optional installation profiles:
 
-Alternatively, install the existing wheel locally once its dependencies are
-available:
+| Install | Enables |
+|---|---|
+| `python -m pip install -e '.[api]'` | Local read-only FastAPI run browser |
+| `python -m pip install -e '.[parquet]'` | Parquet input |
+| `python -m pip install -e '.[stats]'` | Independent NumPy/scikit-learn reference checks; native metrics work without them |
+| `make setup` | Locked developer tools and all three extras |
+| `make setup-core` | Locked developer tools and core dependencies only |
+
+Package installation can require network access. Ordinary evaluations and tests use saved/synthetic data; HTTP and judge verification uses local fake services.
+
+## Evaluate your own data
+
+Save `cases.jsonl` with one JSON object per line:
+
+```jsonl
+{"id":"1","input":"Refund?","expected":"30 days","actual":"30 days"}
+{"id":"2","input":"Shipping?","expected":"2 days","actual":"3 days"}
+```
+
+Run it directly:
 
 ```bash
-pip install dist/omni_eval-0.1.0-py3-none-any.whl
+omni-eval run cases.jsonl --task text --metric exact --metric token_f1 --out runs
 ```
 
-## Python API
-
-Evaluate saved records, inspect metric coverage, and reload the stored run:
-
-```python
-from omni_eval import compare, evaluate, load_run
-
-run = evaluate(
-    samples="examples/classification/samples.jsonl",
-    predictions="examples/classification/predictions.jsonl",
-    metrics=["accuracy", "macro_f1", "brier_score", "ece"],
-    output_dir=".omni-eval/runs",
-)
-
-print([(metric.name, metric.value, metric.coverage) for metric in run.metrics])
-
-restored = load_run(run.path)
-
-# With another compatible saved run:
-# comparisons = compare(other_run, restored, paired=True)
-```
-
-Paired comparisons use shared case IDs and require retained sample and prediction
-records. Metric prerequisites, coverage, and statuses remain part of the results.
-
-## CLI reference
-
-Use `uv run --no-sync` before these commands when working from the repository, or
-run them directly after installing the package. Replace paths in angle brackets
-with your own files or saved run folders.
-
-| Task | Command |
-| --- | --- |
-| Show help | `omni-eval --help` |
-| List native metrics | `omni-eval metrics list` |
-| Inspect metric prerequisites | `omni-eval metrics inspect accuracy` |
-| Preview project initialization | `omni-eval init --dry-run` |
-| Validate saved records | `omni-eval validate --samples <samples.jsonl> --predictions <predictions.jsonl>` |
-| Evaluate a suite | `omni-eval evaluate --config suites/basic.yaml` |
-| Compare saved runs | `omni-eval compare --baseline <baseline-run> --candidate <candidate-run>` |
-| Re-score a saved run | `omni-eval replay --run <run-dir>` |
-| Render a saved report | `omni-eval report --run <run-dir> --format html` |
-| Check local capabilities | `omni-eval doctor --dry-run` |
-| Judge a saved run | `omni-eval judge --run <run-dir> --config examples/endpoint/judge.yaml` |
-| Import completed external runner results | `omni-eval runner --result <result.json>` |
-| Explore saved runs locally | `omni-eval serve --runs .omni-eval/runs` |
-
-**Every operational command supports a synthetic, network-free `--dry-run`.**
-For example:
-
-```bash
-uv run --no-sync omni-eval judge --dry-run
-uv run --no-sync omni-eval runner --dry-run
-uv run --no-sync omni-eval serve --dry-run
-```
-
-Dry runs are clearly marked as synthetic. The live read-only server requires the
-optional API dependencies, installed with
-`uv sync --locked --group dev --extra api`.
-
-## Input contract
-
-Inputs use Pydantic v2 models that reject unknown top-level fields:
-
-| Model | Required fields | Common optional fields |
-| --- | --- | --- |
-| [`EvalSample`](src/omni_eval/schemas/eval_sample.py) | `sample_id`, `input` | `reference`, `metadata`, `extensions` |
-| [`PredictionRecord`](src/omni_eval/schemas/prediction_record.py) | `sample_id`, `output` | `probabilities`, `contexts`, `trace`, `rag_trace`, `timing`, `error`, `extensions` |
-
-JSONL files contain **one record per line**. Records join by `sample_id`
-regardless of order. Prediction probabilities use an explicit class label order:
-
-**Sample** — one line in a sample JSONL file:
-
-```json
-{"sample_id": "s-001", "input": {"text": "Example input"}, "reference": {"label": "yes"}}
-```
-
-**Prediction** — the matching line in a prediction JSONL file:
-
-```json
-{"sample_id": "s-001", "output": {"label": "yes"}, "probabilities": {"labels": ["no", "yes"], "values": [0.1, 0.9], "kind": "softmax"}}
-```
-
-Missing predictions and reference prerequisites affect validation, coverage, and
-statuses; they are **never silently scored as zero**. Offline timing is explicitly
-labelled `measured_external`; endpoint timing is labelled `measured_by_omnieval`.
-
-CSV ingestion requires explicit field mapping through the Python API. See the
-[included examples](examples/) for classification, text, retrieval, RAG, agent,
-and audio records.
-
-### Stored runs and record retention
-
-Stored runs are immutable local folders with a manifest and artifact hash checks.
-They include aggregate and sample-level scores, errors, and the original sample
-and prediction records by default. HTML reports escape displayed content;
-Markdown and JUnit reports are also available through suite configuration.
-
-Set the following in a suite when raw records must not be persisted:
+Or save `eval.yaml` next to the data:
 
 ```yaml
-report:
-  formats: [json, html]
-  retain_records: false
+version: 1
+task: text
+data: cases.jsonl
+metrics: [exact, token_f1]
 ```
 
-This omits the raw sample and prediction files. **Replay and paired comparison
-from that artifact require those records and will therefore be unavailable.**
+```bash
+omni-eval run -c eval.yaml --out runs
+```
 
-## Endpoints and judges
+Paths in YAML resolve relative to the YAML file. JSONL is the default format; CSV requires explicit column mapping, and Parquet requires its extra. Split predictions join by case ID, never by row position. Duplicated/unknown IDs and ambiguous inline-plus-split predictions are rejected. Missing predictions remain visible in coverage.
 
-### HTTP prediction sources
+The same engine is available in Python:
 
-Use [`examples/endpoint/endpoint.yaml`](examples/endpoint/endpoint.yaml) as a
-**development-only example**. Live endpoints require explicit URL configuration
-and allowed hosts. The client:
+```python
+from omni_eval import evaluate, load, compare, metrics
 
-- Rejects private and metadata IP ranges, with an explicit exception for approved
-  loopback development.
-- Disables redirects and environment proxies.
-- Bounds request timeouts, response sizes, retries, and concurrency.
+run = evaluate("cases.jsonl", task="text", metrics=["exact", "token_f1"], out="runs")
+print(run.summary)
+print(run.metric("exact").value)  # 0.5 for the two cases above
+print(run.failures(metric="exact"))
+restored = load(run.path)
+print(compare(run, restored, seed=42).summary)
+print(metrics(task="text"))
+```
 
-External data-use approval is the caller's responsibility.
-**Application-level DNS pre-resolution is not a substitute for a network egress
-firewall** in an untrusted server deployment.
+`evaluate` also accepts a typed `Config` or iterable of `Case` objects. An empty dataset is rejected consistently for files and in-memory inputs.
 
-### Judge evaluation
+## Choose metrics
 
-The `judge` command requires a saved run and explicit rubric/provider
-configuration, or `--dry-run` for a clearly synthetic fixture. See
-[`examples/endpoint/judge.yaml`](examples/endpoint/judge.yaml).
+`omni-eval metrics list` lists 64 registered names, including aliases and k templates. Use a concrete name such as `recall@5` or `topk@2` in configurations. `omni-eval metrics show recall@5` shows tasks, prerequisites, version, unit, and direction.
 
-| Built-in rubric ID | Criterion |
-| --- | --- |
-| `answer-correctness-v1` | Answer correctness relative to a supplied reference |
-| `groundedness-v1` | Factual support in the supplied retrieved contexts |
-| `answer-relevance-v1` | Relevance to the input question |
+| Family | Registered names | Meaning and prerequisites |
+|---|---|---|
+| Classification | `accuracy`, `balanced_accuracy`, `confusion`, `mcc`, `kappa` | Expected/predicted labels. Accuracy is the fraction correct; balanced accuracy averages recall over reference classes. Confusion is a matrix, with no scalar value. MCC and kappa measure agreement. Constant single-class kappa is undefined. |
+| Corpus F1 | `macro_f1`, `micro_f1`, `weighted_f1` | Whole-corpus confusion counts. Macro averages classes, micro pools counts, weighted uses reference support. |
+| Corpus precision | `precision`, `macro_precision`, `micro_precision`, `weighted_precision` | TP/(TP+FP), using the selected averaging policy. Plain precision needs `positive_label`. |
+| Corpus recall | `recall`, `macro_recall`, `micro_recall`, `weighted_recall` | TP/(TP+FN). Plain recall needs `positive_label`; zero denominators use zero. |
+| Probabilities | `brier`, `logloss`, `topk@k`, `auroc`, `auprc` | Labeled probabilities/scores plus expected labels; a separate predicted label is unnecessary. Brier sums squared error over the full class vector (binary range 0–2). Log loss clips at 1e-15 and uses natural logs. Top-k breaks ties by declared class order. AUROC uses half credit for ties; AUPRC is threshold-block average precision. Both need `positive_label`; AUROC needs both reference classes, AUPRC needs a positive. |
+| Calibration | `ece`, `mce` | Softmax confidence versus correctness, in equal-width bins (default 10; configurable 2–100). ECE weights bin gaps by support; MCE takes the largest gap. Lower is better. |
+| Text overlap | `exact`, `answer_match`, `token_f1`, `token_precision`, `token_recall` | Exact is case-sensitive equality. Answer match uses Unicode NFKC, lowercasing, word tokens, and whitespace normalization. Token scores use multiset overlap. Expected and actual text are required. |
+| JSON and format | `json_valid`, `schema_valid`, `fields_f1`, `format` | Strict JSON, local JSON Schema validation, exact JSON-typed key/value F1, and configured length/regex checks. Field matching ignores object key order. Schema validation requires a schema; remote references are unavailable. |
+| Token likelihood | `nll`, `perplexity` | Actual output must contain nonempty finite, nonpositive token `logprobs`. NLL is negative mean log probability over all tokens; perplexity is exp(NLL), a dimensionless ratio. Overflow is unavailable rather than capped. |
+| Transcripts | `wer`, `cer` | Mean per-case word/character edit distance divided by reference length. Empty/empty scores zero; nonempty prediction with an empty reference is undefined. Values can exceed one. |
+| Retrieval | `precision@k`, `recall@k`, `hit@k`, `success@k`, `mrr`, `map`, `ndcg@k`, `rprec` | Ranked unique context IDs and explicit relevance judgments. P@k divides by k even for short lists; recall divides by all relevant IDs. MRR uses the first relevant rank, MAP uses relevant-rank precision, nDCG uses binary gains with log2 discounts. Unparameterized MRR/MAP inspect the full list. k is 1–1000; rank templates default to 5, top-k to 1. |
+| RAG | `citation_valid`, `evidence_coverage`, `context_precision`, `rerank_delta` | Citation validity checks IDs in supplied contexts. Evidence coverage is relevant IDs retained / reference relevant IDs; context precision is relevant / selected contexts. Rerank delta compares nDCG@5 with ranked IDs in `extensions.before`. These are not factual-faithfulness judgments. |
+| Agents and MCP | `state_success`, `state_partial`, `tool_allowed`, `tool_success`, `loop_rate`, `step_order`, `retry_rate` | Observed state must satisfy expected state. Tool checks require observed calls, permissions, success flags, or required order. Loop rate counts identical consecutive requests; retry rate is retries per tool call. Final self-reported success is insufficient. |
+| Security | `attack_success`, `policy_violation` | Explicit verified scenario/policy oracle results. Detector flags and generated claims are insufficient. Lower is better. |
+| Code and SQL | `code_valid`, `sql_select_safe` | Python AST syntax and a conservative single-SELECT text filter. Neither executes the prediction or establishes functional correctness. |
+| Timing and reliability | `latency_mean`, `latency_p50`, `latency_p95`, `latency_p99`, `success_rate` | Latency is milliseconds with linear quantiles and matching scope/provenance. Success rate counts all attempted cases, including errors. Uploaded timing is not a fresh measurement. |
 
-**External judge scores are estimates, not ground-truth oracle verdicts.**
+Unless stated otherwise, match/compliance scores are fractions in [0,1] and higher is better. MCC/kappa can be negative; loss, edit error, latency, violation, loop, and retry metrics are minimized. `rerank_delta` is signed. Empty or absent context lists are currently unscorable where context prerequisites apply; they are reported with reduced coverage.
 
+Settings belong under `limits.metric_settings`, keyed by the exact requested name. For example, a probability evaluation at the repository root can use:
 
+```yaml
+version: 1
+task: classification
+data: examples/classification/cases.jsonl
+metrics: [accuracy, auroc, ece]
+limits:
+  metric_settings:
+    auroc:
+      positive_label: B
+    ece:
+      bins: 10
+```
 
-## Development
+`schema_valid` accepts `schema` in its metric settings or `expected.schema`. `format` accepts `min_length`, `max_length`, and a short `pattern`. Only local schema references such as `#/$defs/name` are resolved. Format regex checks are intended for trusted configurations, not an adversarial-input sandbox.
 
-Use the Makefile for the repository's development commands:
+## Understand results and compare runs
 
-| Command | Purpose |
-| --- | --- |
-| `make setup` | Install the project and development dependencies |
-| `make format` | Sort imports, then format all Python files with Ruff |
-| `make format-check` | Check import order and formatting without editing files |
-| `make lint` | Run all configured Ruff lint rules |
-| `make check` | Run formatting and lint checks |
-| `make typecheck` | Run mypy on the package |
-| `make test` | Run the test suite |
-| `make help` | List available targets |
+Every score reports `value`, `status`, `n_total`, `n_eligible`, `n_scored`, `n_failed`, `n_missing`, and coverage (`n_scored / n_total`). A high score on a small eligible subset does not establish full-dataset performance. Undefined or failed scores use null, with status/reason evidence. A corpus score need not have a per-case scalar.
 
-Run `make setup` again after development dependencies change. Other targets use
-those installed dependencies without syncing the environment.
+Saved runs contain configuration, provenance, metric versions, checksums, and optional case/point/error records. `output: {retain: false}` suppresses those records; replay then requires another retained source. Loading rejects altered, added, missing, incomplete, or symlinked artifacts.
 
-The development group includes the optional API dependencies and JSON Schema
-stubs so strict type checks and API tests cover the full package. Core wheel
-installations keep those API dependencies optional. Mypy follows the active
-Python interpreter; CI checks Python 3.11, 3.12, and 3.13 with the same lockfile.
+```bash
+omni-eval report runs/BASELINE_ID --format html
+omni-eval report runs/BASELINE_ID --format json
+omni-eval report runs/BASELINE_ID --format md
+omni-eval report runs/BASELINE_ID --format junit
+omni-eval compare runs/BASELINE_ID runs/CANDIDATE_ID --metric accuracy
+omni-eval check runs/CANDIDATE_ID -c gates.yaml --strict
+```
 
-Ruff uses an 88-character line length, four-space indentation, double quotes, and
-separate standard library, third-party, and project import groups. Its version
-matches the pre-commit hooks. Automatic fixes are restricted to imports so
-formatting preserves program logic.
+Replace the run IDs with actual saved directory names. A minimal `gates.yaml` is:
 
-Keep one blank line between logical sections inside functions. Ruff preserves
-these separators but does not infer or insert them automatically. Trailing commas
-keep longer expressions expanded across lines when needed.
+```yaml
+gates:
+  - metric: accuracy
+    op: gte
+    value: 0.8
+    min_coverage: 1.0
+```
 
-## License
+Comparison pairs stable IDs and checks inputs, references, metric settings, versions, units, sources, and latency methodology. Bootstrap intervals are deterministic for a fixed seed and require paired sample scores; corpus-only metrics do not receive fabricated intervals. Slices use metadata keys and suppress small groups (default minimum support 5).
 
-[MIT](LICENSE).
+Gates return pass, fail, or inconclusive. CLI exits are 0 for normal completion, 1 for a failed threshold, 2 for invalid input, 3 for runtime/provider failure, 4 for an inconclusive gate with `--strict`, and 5 for policy refusal. Without `--strict`, inconclusive outcomes are displayed with exit 0; use strict mode in CI. `min_pairs` on an absolute saved-run gate is inconclusive because pairing evidence is unavailable there.
+
+Native scoring policy is version 2 after correctness fixes; saved older runs remain readable, but comparison rejects differing metric versions. Synthetic results are identified in human reports, JSON, and JUnit.
+
+## Local transports and optional judge
+
+`source: http` and `source: openai` require an explicit target, allowlisted hosts/ports, and environment-referenced endpoint/token. Both honor configured retries and record measured timing. Requests are currently serial; concurrent acquisition and full cost accounting remain future work. Test fixtures exercise HTTP failures without contacting real providers.
+
+`judge:relevance` is an estimated rubric score from an explicitly configured OpenAI-compatible endpoint. Configure `model`, `rubric`, `url_env`, `allowed_hosts`, finite call/token budgets, and `approve_external_data: true`; see `examples/judge/rubric.yaml`. The fake local judge verifies the protocol, consent, evidence, errors, and budgets. Actual model quality remains unverified.
+
+`run --dry-run` substitutes synthetic inputs and the fixture worker for external evaluation; it does not send the dataset to a provider. `fixture:echo` always marks its result synthetic. `plugins list/show/doctor/setup` expose capability status; planned workers refuse real execution. There are no qualified Ragas, DeepEval, scanner, GPU, or benchmark integrations yet.
+
+The optional API is created with `omni_eval.server.app.create_app(runs)`. It exposes read-only health, metric, run-list, and run-summary routes. Bind it only to loopback. HTTPS/allowlist checks and redirect refusal are tested, but production authentication, strong sandboxing, and DNS rebinding defenses still require deployment work.
+
+## Reproduce verification
+
+```bash
+make setup
+make check
+make smoke
+make coverage
+make release-check
+uv run --no-sync python scripts/smoke.py --performance
+```
+
+`make check` requires all extras and runs lock consistency, formatting, lint, strict typing, the complete suite, and command dry-runs. `make release-check` additionally builds distributions, checks metadata with Twine, and installs the wheel plus locked core dependencies in a fresh environment outside the checkout. To keep artifacts separate, set `DIST=/tmp/omni-eval-dist`; an existing wheel can be selected with `make smoke-wheel WHEEL=/absolute/path/to/package.whl`.
+
+`make setup-core && make test` verifies the minimal profile. API, Parquet, and independent statistics checks skip explicitly when their extras are absent. Full verification sets `OMNIEVAL_REQUIRE_EXTRAS=1` and fails immediately if an extra is missing. Tests permit loopback connections only.
+
+Current evidence: all 64 metric names have independent known-answer assertions; all 11 task examples pass; the full suite passes on Python 3.11–3.13. Coverage and performance measurements, exact commands, remaining limitations, and roadmap status are maintained in [IMPLEMENTATION.md](IMPLEMENTATION.md). [PLAN.md](PLAN.md) and [INTEGRATIONS_PLAN.md](INTEGRATIONS_PLAN.md) describe future work, not completed capabilities.

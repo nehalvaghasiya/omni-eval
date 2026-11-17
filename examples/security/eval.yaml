@@ -1,0 +1,5 @@
+version: 1
+name: security-example
+task: security
+data: cases.jsonl
+metrics: [attack_success]

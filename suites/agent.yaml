@@ -1,9 +1,0 @@
-schema_version: "1.0"
-name: example-agent
-source: {mode: offline, predictions: examples/agent/predictions.jsonl}
-dataset: examples/agent/samples.jsonl
-metrics:
-  - name: agent_state_success
-  - name: unauthorized_tool_rate
-  - name: trajectory_check
-report: {formats: [json, html]}

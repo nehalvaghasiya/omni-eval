@@ -1,0 +1,1 @@
+{"id":"v1","input":{"asset":"example.png"},"expected":{"label":"cat"},"actual":{"label":"cat"},"contexts":[],"meta":{},"extensions":{}}
