@@ -1,0 +1,23 @@
+name: Feature request
+description: Propose an improvement to an evaluation workflow.
+title: "feat: "
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Evaluation problem
+      description: What are you trying to evaluate, and what is missing from the current workflow?
+    validations:
+      required: true
+  - type: textarea
+    id: example
+    attributes:
+      label: Concrete example and expected result
+      description: Include a small synthetic example or proposed command/configuration.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Describe existing metrics, workflows, or tools you tried.

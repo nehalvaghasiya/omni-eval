@@ -6,7 +6,11 @@ permissions:
   contents: read
 jobs:
   test:
+    name: Python ${{ matrix.python }} / ${{ matrix.profile }}
     runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      UV_PYTHON: ${{ matrix.python }}
     strategy:
       matrix:
         python: ['3.11','3.12','3.13']
@@ -14,6 +18,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
+        with:
+          version: '0.12.1'
+          enable-cache: true
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python }}
@@ -22,6 +29,16 @@ jobs:
         run: uv sync --locked --group dev
       - if: matrix.profile == 'full'
         run: uv sync --locked --group dev --all-extras
+      - name: Verify matrix interpreter
+        run: |
+          uv run --no-sync python - <<'PY'
+          import os
+          import sys
+
+          actual = f"{sys.version_info.major}.{sys.version_info.minor}"
+          assert actual == os.environ["UV_PYTHON"], (actual, os.environ["UV_PYTHON"])
+          print(sys.version)
+          PY
       - run: uv run --no-sync ruff check .
       - run: uv run --no-sync ruff format --check .
       - if: matrix.profile == 'full'
