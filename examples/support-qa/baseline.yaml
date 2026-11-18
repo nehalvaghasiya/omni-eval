@@ -1,0 +1,6 @@
+version: 1
+name: support-qa-baseline
+task: text
+data: cases.jsonl
+predictions: baseline.jsonl
+metrics: [answer_match]

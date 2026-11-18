@@ -1,0 +1,4 @@
+{"id":"refund","input":"How long do I have to request a refund? Answer with the time window only.","expected":"30 days"}
+{"id":"cancel","input":"Where can I cancel my subscription? Answer with the location only.","expected":"account settings"}
+{"id":"shipping","input":"How long does standard shipping take? Answer with the delivery time only.","expected":"2 business days"}
+{"id":"password","input":"What should I use to reset my password? Answer with the method only.","expected":"reset link"}

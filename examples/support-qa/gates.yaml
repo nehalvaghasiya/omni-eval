@@ -1,0 +1,5 @@
+gates:
+  - metric: answer_match
+    op: gte
+    value: 1.0
+    min_coverage: 1.0

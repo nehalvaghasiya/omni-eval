@@ -1,0 +1,6 @@
+version: 1
+name: support-qa-candidate
+task: text
+data: cases.jsonl
+predictions: candidate.jsonl
+metrics: [answer_match]
