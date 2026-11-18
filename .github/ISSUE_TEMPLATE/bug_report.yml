@@ -1,0 +1,37 @@
+name: Bug report
+description: Report a reproducible problem with an OmniEval workflow.
+title: "bug: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        For vulnerabilities, follow SECURITY.md rather than including details here.
+        Use synthetic data and remove credentials from commands and output.
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Include OmniEval, Python, uv, OS, and installed extras.
+      placeholder: "OmniEval 0.2.0, Python 3.12, uv 0.12.1, Linux, core profile"
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal reproduction
+      description: Include the exact command and the smallest synthetic dataset/configuration that reproduces the issue.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior and output
+      description: Include sanitized output, errors, and the exit code when relevant.
+    validations:
+      required: true

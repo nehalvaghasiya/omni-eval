@@ -1,17 +1,36 @@
 [build-system]
-requires = ["setuptools>=75", "wheel"]
+requires = ["setuptools>=77.0.3", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "omni-eval"
 version = "0.2.0"
 requires-python = ">=3.11,<3.14"
-description = "Simple, evidence-based evaluation for AI predictions, RAG and agents"
+description = "Evaluate saved AI outputs, compare prompts and models, and catch regressions"
 readme = "README.md"
 license = "MIT"
+license-files = ["LICENSE"]
 keywords = ["ai", "evaluation", "rag", "llm", "retrieval", "agents"]
 authors = [{name = "OmniEval contributors"}]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Typing :: Typed",
+]
 dependencies = ["pydantic>=2.7,<3", "typer>=0.12,<1", "PyYAML>=6,<7", "httpx>=0.27,<1", "jsonschema>=4.20,<5"]
+
+[project.urls]
+Homepage = "https://github.com/nehalvaghasiya/omni-eval"
+Documentation = "https://github.com/nehalvaghasiya/omni-eval#readme"
+Repository = "https://github.com/nehalvaghasiya/omni-eval"
+Issues = "https://github.com/nehalvaghasiya/omni-eval/issues"
+Changelog = "https://github.com/nehalvaghasiya/omni-eval/blob/main/CHANGELOG.md"
 
 [project.scripts]
 omni-eval = "omni_eval.cli.app:main"

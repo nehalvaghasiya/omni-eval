@@ -36,7 +36,8 @@ def test_synthetic_demo(task):
         ("plugins", "setup", "ragas", "--dry-run"),
     ],
 )
-def test_dry_commands(args):
+def test_dry_commands(args, tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
     result = cli(*args)
     assert result.exit_code == 0, (args, result.output)
 

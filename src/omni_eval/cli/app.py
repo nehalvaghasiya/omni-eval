@@ -13,7 +13,10 @@ from omni_eval.cli.plugins import plugin_doctor, plugin_list, plugin_setup, plug
 from omni_eval.cli.report import report
 from omni_eval.cli.run import run
 
-app = typer.Typer(help="OmniEval: simple, reproducible AI evaluations", no_args_is_help=True)
+app = typer.Typer(
+    help="OmniEval: evaluate saved AI outputs, compare runs, and check regressions",
+    no_args_is_help=True,
+)
 metrics_app = typer.Typer(help="List and inspect native metric formulas")
 plugins_app = typer.Typer(help="Inspect and prepare optional evaluation plugins")
 app.command("run")(run)

@@ -14,7 +14,7 @@ from omni_eval.types.config import Config
 def run(
     data: Annotated[Path | None, typer.Argument(help="JSONL cases file")] = None,
     task: Annotated[
-        str | None, typer.Option("--task", help="classification, text, retrieval, rag, agent, ...")
+        str | None, typer.Option("--task", help="text, retrieval, rag, agent, classification, ...")
     ] = None,
     config: Annotated[
         Path | None, typer.Option("-c", "--config", help="YAML evaluation config")
@@ -37,7 +37,7 @@ def run(
         elif dry_run:
             spec = Config(task=task or "classification", data="synthetic")
         else:
-            raise ValueError("provide a cases file or -c config; see 'omni-eval demo'")
+            raise ValueError("provide a cases file or -c config; see 'omni-eval run --help'")
         _print_run(evaluate(spec, task=task, metrics=metric or None, out=out, dry_run=dry_run))
     except Exception as exc:
         _failure(exc)
